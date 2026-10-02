@@ -20,7 +20,8 @@ def fetch_forecast(
             "temperature_2m,"
             "precipitation_probability,"
             "weather_code,"
-            "wind_speed_10m"
+            "wind_speed_10m,"
+            "relative_humidity_2m"
         ),
         "forecast_days": 2,
         "timezone": "auto",
@@ -45,13 +46,15 @@ def fetch_forecast(
             precipitation_probability=precipitation,
             weather_code=code,
             wind_speed=wind_speed,
+            humidity=humidity,
         )
-        for time, temperature, precipitation, code, wind_speed in zip(
+        for time, temperature, precipitation, code, wind_speed, humidity in zip(
             hourly["time"],
             hourly["temperature_2m"],
             hourly["precipitation_probability"],
             hourly["weather_code"],
             hourly["wind_speed_10m"],
+            hourly["relative_humidity_2m"],
         )
     )
 

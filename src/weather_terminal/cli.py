@@ -15,6 +15,13 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "-c",
+        "--compact",
+        action="store_true",
+        help="Show a space-saving forecast layout",
+    )
+
+    parser.add_argument(
         "--latitude",
         type=float,
         default=47.4979,
@@ -41,19 +48,21 @@ def main() -> None:
 
     points = forecast.points[:24]
 
-    print()
-    print(
-        f"  Weather: {forecast.location}"
-    )
+    if not args.compact:
+        print()
+        print(
+            f"  Weather: {forecast.location}"
+        )
 
-    print(
-        f"  Timezone: {forecast.timezone}"
-    )
+        print(
+            f"  Timezone: {forecast.timezone}"
+        )
 
-    print()
+        print()
 
-    print("  TEMPERATURE")
-    print()
+    if not args.compact:
+        print("  TEMPERATURE")
+        print()
 
     print(
         render_temperature_chart(
@@ -65,9 +74,6 @@ def main() -> None:
 
     print()
 
-    print("  WEATHER")
-    print()
-
     print(
         render_weather_strip(
             points,
@@ -75,9 +81,6 @@ def main() -> None:
         )
     )
 
-    print()
-
-    print("  PRECIPITATION")
     print()
 
     print(
@@ -90,8 +93,19 @@ def main() -> None:
 
     print()
 
-    print("  WIND")
+    if not args.compact:
+        print("  HUMIDITY")
+        print()
+
+    print(
+        f"  Humidity: {points[0].humidity}%"
+    )
+
     print()
+
+    if not args.compact:
+        print("  WIND")
+        print()
 
     print(
         render_wind_summary(
@@ -99,12 +113,12 @@ def main() -> None:
         )
     )
 
-    print()
-
-    print(
-        f"  Forecast: "
-        f"{points[0].time:%Y-%m-%d}"
-    )
+    if not args.compact:
+        print()
+        print(
+            f"  Forecast: "
+            f"{points[0].time:%Y-%m-%d}"
+        )
 
     print()
 
