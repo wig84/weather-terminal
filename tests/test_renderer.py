@@ -168,8 +168,6 @@ def test_chart_respects_requested_width() -> None:
 
     lines = chart.splitlines()
 
-    # A színezés ANSI escape sequence-ei nem
-    # számítanak terminálon látható karakternek.
     import re
 
     ansi_escape = re.compile(
@@ -209,3 +207,91 @@ def test_temperature_axis_has_20_percent_padding() -> None:
 
     assert minimum <= expected_minimum
     assert maximum >= expected_maximum
+
+
+def test_chart_renders_all_graph_rows() -> None:
+    points = make_points(
+        14,
+        15,
+        16,
+        18,
+        21,
+        23,
+        24,
+        23,
+        21,
+        19,
+        17,
+        15,
+    )
+
+    chart = render_temperature_chart(
+        points,
+        width=20,
+        height=10,
+    )
+
+    lines = chart.splitlines()
+
+    bottom_index = next(
+        index
+        for index, line in enumerate(lines)
+        if "└" in line
+    )
+
+    graph_lines = lines[
+        :bottom_index
+    ]
+
+    expected_graph_height = (
+        (10 * 4 + 3) // 4
+    )
+
+    assert len(graph_lines) == (
+        expected_graph_height
+    )
+
+
+def test_chart_contains_lower_temperature_data() -> None:
+    points = make_points(
+        14,
+        15,
+        16,
+        18,
+        21,
+        23,
+        24,
+        23,
+        21,
+        19,
+        17,
+        15,
+    )
+
+    chart = render_temperature_chart(
+        points,
+        width=20,
+        height=10,
+    )
+
+    lines = chart.splitlines()
+
+    bottom_index = next(
+        index
+        for index, line in enumerate(lines)
+        if "└" in line
+    )
+
+    graph_lines = lines[
+        :bottom_index
+    ]
+
+    lower_half = graph_lines[
+        len(graph_lines) // 2 :
+    ]
+
+    assert any(
+        0x2800 <= ord(char) <= 0x28FF
+        for line in lower_half
+        for char in line
+    )

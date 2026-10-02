@@ -25,7 +25,9 @@ _BRAILLE_DOTS = {
 _RESET = "\033[0m"
 
 
-def _braille_char(pixels: set[tuple[int, int]]) -> str:
+def _braille_char(
+    pixels: set[tuple[int, int]],
+) -> str:
     """Convert 2x4 pixel coordinates into one Braille character."""
     value = 0
 
@@ -58,7 +60,10 @@ def _interpolate(
         )
 
         left = int(position)
-        right = min(left + 1, len(values) - 1)
+        right = min(
+            left + 1,
+            len(values) - 1,
+        )
 
         fraction = position - left
 
@@ -462,6 +467,52 @@ def _render_time_axis(
     return "".join(axis)
 
 
+def _axis_labels_by_row(
+    *,
+    graph_height: int,
+    pixel_height: int,
+    minimum: float,
+    maximum: float,
+    step: float,
+) -> dict[int, str]:
+    """Map temperature axis labels to the corresponding graph rows."""
+    labels: dict[int, str] = {}
+
+    if graph_height <= 0:
+        return labels
+
+    current = maximum
+
+    while (
+        current
+        >= minimum - step / 10
+    ):
+        normalized = (
+            (current - minimum)
+            / (maximum - minimum)
+            if maximum > minimum
+            else 0.5
+        )
+
+        pixel_y = round(
+            (1.0 - normalized)
+            * (pixel_height - 1)
+        )
+
+        row = min(
+            graph_height - 1,
+            pixel_y // 4,
+        )
+
+        labels[row] = (
+            f"{_format_axis_value(current)}°"
+        )
+
+        current -= step
+
+    return labels
+
+
 def render_temperature_chart(
     points: Sequence[WeatherPoint],
     *,
@@ -525,28 +576,31 @@ def render_temperature_chart(
         maximum=maximum,
     )
 
-    scale_values = []
+    graph_height = len(graph)
 
-    current = maximum
-
-    while (
-        current
-        >= minimum - step / 10
-    ):
-        scale_values.append(current)
-        current -= step
+    axis_labels = _axis_labels_by_row(
+        graph_height=graph_height,
+        pixel_height=pixel_height,
+        minimum=minimum,
+        maximum=maximum,
+        step=step,
+    )
 
     rendered: list[str] = []
 
-    for row, line in zip(
-        scale_values,
-        graph,
-    ):
-        label = _format_axis_value(row)
-
-        rendered.append(
-            f"{label:>4}° ┤ {line}"
+    for row_index, line in enumerate(graph):
+        label = axis_labels.get(
+            row_index
         )
+
+        if label is not None:
+            rendered.append(
+                f"{label:>5} ┤ {line}"
+            )
+        else:
+            rendered.append(
+                f"{'':>5} │ {line}"
+            )
 
     # ANSI escape sequence-ek miatt a
     # len(graph[0]) nem használható.
