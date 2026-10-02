@@ -5,6 +5,7 @@ from .renderer import (
     render_precipitation_chart,
     render_temperature_chart,
     render_weather_strip,
+    render_wind_summary,
 )
 
 
@@ -84,6 +85,17 @@ def main() -> None:
             points,
             width=32,
             height=6,
+        )
+    )
+
+    print()
+
+    print("  WIND")
+    print()
+
+    print(
+        render_wind_summary(
+            points
         )
     )
 

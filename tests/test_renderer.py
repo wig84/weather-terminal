@@ -6,8 +6,12 @@ from weather_terminal.renderer import (
     render_precipitation_chart,
     render_temperature_chart,
     render_weather_strip,
+    render_wind_summary,
     weather_color,
     weather_symbol,
+    wind_color,
+    wind_level,
+    wind_symbol,
 )
 
 
@@ -70,6 +74,28 @@ def make_precipitation_points(
         )
         for index, probability in enumerate(
             probabilities
+        )
+    ]
+
+
+def make_wind_points(
+    *wind_speeds: float,
+) -> list[WeatherPoint]:
+    return [
+        WeatherPoint(
+            time=datetime(
+                2026,
+                10,
+                2,
+                index,
+            ),
+            temperature=20.0,
+            precipitation_probability=0,
+            weather_code=0,
+            wind_speed=wind_speed,
+        )
+        for index, wind_speed in enumerate(
+            wind_speeds
         )
     ]
 
@@ -544,3 +570,108 @@ def test_precipitation_chart_no_rain_message() -> None:
     assert "40%" in chart
     assert "20%" in chart
     assert "0%" in chart
+
+
+def test_wind_level() -> None:
+    assert wind_level(0) == "Light"
+    assert wind_level(9.9) == "Light"
+    assert wind_level(10) == "Moderate"
+    assert wind_level(24.9) == "Moderate"
+    assert wind_level(25) == "Strong"
+
+
+def test_wind_symbol() -> None:
+    assert wind_symbol(5) == "🌬"
+    assert wind_symbol(15) == "💨"
+    assert wind_symbol(30) == "💨"
+
+
+def test_wind_color() -> None:
+    assert wind_color(5) == (
+        100,
+        210,
+        255,
+    )
+
+    assert wind_color(15) == (
+        255,
+        220,
+        70,
+    )
+
+    assert wind_color(30) == (
+        255,
+        120,
+        60,
+    )
+
+
+def test_wind_summary_contains_periods() -> None:
+    points = make_wind_points(
+        *([5] * 24)
+    )
+
+    wind = render_wind_summary(
+        points
+    )
+
+    assert "Morning" in wind
+    assert "Midday" in wind
+    assert "Afternoon" in wind
+    assert "Evening" in wind
+
+
+def test_wind_summary_contains_levels() -> None:
+    speeds = [5] * 24
+
+    speeds[6] = 5
+    speeds[10] = 15
+    speeds[13] = 30
+    speeds[18] = 5
+
+    points = make_wind_points(
+        *speeds
+    )
+
+    wind = render_wind_summary(
+        points
+    )
+
+    assert "Light" in wind
+    assert "Moderate" in wind
+    assert "Strong" in wind
+
+
+def test_wind_summary_contains_colors() -> None:
+    points = make_wind_points(
+        *([30] * 24)
+    )
+
+    wind = render_wind_summary(
+        points
+    )
+
+    assert "\033[38;2;" in wind
+    assert "\033[0m" in wind
+
+
+def test_wind_summary_empty_data() -> None:
+    wind = render_wind_summary([])
+
+    assert "No data" in wind
+
+
+def test_weather_point_wind_is_optional() -> None:
+    point = WeatherPoint(
+        time=datetime(
+            2026,
+            10,
+            2,
+            12,
+        ),
+        temperature=20.0,
+        precipitation_probability=0,
+        weather_code=0,
+    )
+
+    assert point.wind_speed is None

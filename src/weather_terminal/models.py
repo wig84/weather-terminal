@@ -8,6 +8,7 @@ class WeatherPoint:
     temperature: float
     precipitation_probability: int | None
     weather_code: int | None
+    wind_speed: float | None = None
 
 
 @dataclass(frozen=True)

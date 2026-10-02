@@ -3,14 +3,6 @@ from collections.abc import Sequence
 from .models import WeatherPoint
 
 
-# Braille Unicode:
-#
-#   1 4
-#   2 5
-#   3 6
-#   7 8
-#
-# Egy karakter tehát 2 x 4 "pixel".
 _BRAILLE_DOTS = {
     (0, 0): 0x01,
     (0, 1): 0x02,
@@ -28,7 +20,6 @@ _RESET = "\033[0m"
 def _braille_char(
     pixels: set[tuple[int, int]],
 ) -> str:
-    """Convert 2x4 pixel coordinates into one Braille character."""
     value = 0
 
     for x, y in pixels:
@@ -41,7 +32,6 @@ def _interpolate(
     values: Sequence[float],
     width: int,
 ) -> list[float]:
-    """Resample values to the requested pixel width."""
     if not values:
         return []
 
@@ -85,7 +75,6 @@ def _nice_step(
     data_range: float,
     target_steps: int = 5,
 ) -> float:
-    """Choose a human-friendly axis step."""
     if data_range <= 0:
         return 1.0
 
@@ -121,7 +110,6 @@ def _temperature_axis(
     *,
     target_steps: int = 5,
 ) -> tuple[float, float, float]:
-    """Create a temperature axis with 20% padding around the daily range."""
     import math
 
     data_range = maximum - minimum
@@ -172,7 +160,6 @@ def _plot_line(
     minimum: float,
     maximum: float,
 ) -> set[tuple[int, int]]:
-    """Create a pixel representation of a line."""
     pixels: set[tuple[int, int]] = set()
 
     if not values:
@@ -238,10 +225,6 @@ def _temperature_color(
     minimum: float,
     maximum: float,
 ) -> tuple[int, int, int]:
-    """
-    Map temperature to a
-    blue -> cyan -> green -> yellow -> orange -> red gradient.
-    """
     if maximum <= minimum:
         normalized = 0.5
     else:
@@ -303,7 +286,6 @@ def _ansi_color(
     minimum: float,
     maximum: float,
 ) -> str:
-    """Return an ANSI truecolor escape sequence."""
     red, green, blue = _temperature_color(
         temperature,
         minimum=minimum,
@@ -325,7 +307,6 @@ def _render_braille(
     minimum: float,
     maximum: float,
 ) -> list[str]:
-    """Convert the pixel grid into colored Braille characters."""
     char_width = (
         pixel_width + 1
     ) // 2
@@ -402,7 +383,6 @@ def _render_braille(
 def _format_axis_value(
     value: float,
 ) -> str:
-    """Format an axis value without unnecessary decimals."""
     if value.is_integer():
         return str(int(value))
 
@@ -414,7 +394,6 @@ def _render_time_axis(
     *,
     char_width: int,
 ) -> str:
-    """Render a compact time axis aligned with the graph."""
     if not points or char_width <= 0:
         return ""
 
@@ -471,7 +450,6 @@ def _axis_labels_by_row(
     maximum: float,
     step: float,
 ) -> dict[int, str]:
-    """Map temperature axis labels to the corresponding graph rows."""
     labels: dict[int, str] = {}
 
     if graph_height <= 0:
@@ -512,7 +490,6 @@ def _axis_labels_by_row(
 def weather_symbol(
     weather_code: int | None,
 ) -> str:
-    """Convert a WMO weather code into a terminal-friendly symbol."""
     if weather_code is None:
         return "?"
 
@@ -528,19 +505,44 @@ def weather_symbol(
     if weather_code in (45, 48):
         return "🌫"
 
-    if weather_code in (51, 53, 55, 56, 57):
+    if weather_code in (
+        51,
+        53,
+        55,
+        56,
+        57,
+    ):
         return "🌦"
 
-    if weather_code in (61, 63, 65, 66, 67):
+    if weather_code in (
+        61,
+        63,
+        65,
+        66,
+        67,
+    ):
         return "🌧"
 
-    if weather_code in (71, 73, 75, 77):
+    if weather_code in (
+        71,
+        73,
+        75,
+        77,
+    ):
         return "🌨"
 
-    if weather_code in (80, 81, 82):
+    if weather_code in (
+        80,
+        81,
+        82,
+    ):
         return "🌦"
 
-    if weather_code in (95, 96, 99):
+    if weather_code in (
+        95,
+        96,
+        99,
+    ):
         return "⛈"
 
     return "?"
@@ -549,7 +551,6 @@ def weather_symbol(
 def weather_color(
     weather_code: int | None,
 ) -> tuple[int, int, int]:
-    """Return an RGB color for a WMO weather code."""
     if weather_code == 0:
         return (255, 210, 40)
 
@@ -562,19 +563,44 @@ def weather_color(
     if weather_code in (45, 48):
         return (150, 160, 170)
 
-    if weather_code in (51, 53, 55, 56, 57):
+    if weather_code in (
+        51,
+        53,
+        55,
+        56,
+        57,
+    ):
         return (90, 190, 255)
 
-    if weather_code in (61, 63, 65, 66, 67):
+    if weather_code in (
+        61,
+        63,
+        65,
+        66,
+        67,
+    ):
         return (60, 150, 255)
 
-    if weather_code in (71, 73, 75, 77):
+    if weather_code in (
+        71,
+        73,
+        75,
+        77,
+    ):
         return (150, 225, 255)
 
-    if weather_code in (80, 81, 82):
+    if weather_code in (
+        80,
+        81,
+        82,
+    ):
         return (70, 175, 255)
 
-    if weather_code in (95, 96, 99):
+    if weather_code in (
+        95,
+        96,
+        99,
+    ):
         return (190, 120, 255)
 
     return (180, 180, 180)
@@ -583,7 +609,6 @@ def weather_color(
 def _weather_ansi_color(
     weather_code: int | None,
 ) -> str:
-    """Return an ANSI truecolor sequence for a weather code."""
     red, green, blue = weather_color(
         weather_code
     )
@@ -599,7 +624,6 @@ def _render_weather_axis(
     *,
     char_width: int,
 ) -> str:
-    """Render colored weather symbols aligned with the time axis."""
     if not points or char_width <= 0:
         return ""
 
@@ -643,7 +667,6 @@ def render_weather_strip(
     *,
     width: int = 32,
 ) -> str:
-    """Render colored weather symbols with a compact time axis."""
     if not points:
         return "No weather data."
 
@@ -676,7 +699,6 @@ def render_precipitation_chart(
     width: int = 32,
     height: int = 6,
 ) -> str:
-    """Render precipitation probability as a compact bar chart."""
     if not points:
         return "No precipitation data."
 
@@ -694,11 +716,6 @@ def render_precipitation_chart(
         width,
     )
 
-    chart_height = max(
-        1,
-        height,
-    )
-
     probabilities = [
         point.precipitation_probability
         if point.precipitation_probability
@@ -707,8 +724,6 @@ def render_precipitation_chart(
         for point in visible_points
     ]
 
-    # Ha egész nap 0% a csapadékvalószínűség,
-    # ne üres diagramot jelenítsünk meg.
     no_rain = all(
         probability == 0
         for probability in probabilities
@@ -728,7 +743,6 @@ def render_precipitation_chart(
         ),
     )
 
-    # Öt oszlopsor: 100, 80, 60, 40, 20%.
     bar_levels = (
         100,
         80,
@@ -803,23 +817,16 @@ def render_precipitation_chart(
             line[:chart_width]
         )
 
-    # A 0%-os baseline.
-    lines.append(
-        "─" * chart_width
-    )
-
     time_axis = _render_time_axis(
         visible_points,
         char_width=chart_width,
     )
 
-    lines.append(time_axis)
-
     rendered: list[str] = []
 
     for level, line in zip(
         bar_levels,
-        lines[:len(bar_levels)],
+        lines,
     ):
         rendered.append(
             f"{level:>3}% │ {line}"
@@ -837,13 +844,164 @@ def render_precipitation_chart(
     return "\n".join(rendered)
 
 
+def wind_level(
+    speed_kmh: float | None,
+) -> str:
+    if speed_kmh is None:
+        return "Unknown"
+
+    if speed_kmh < 10:
+        return "Light"
+
+    if speed_kmh < 25:
+        return "Moderate"
+
+    return "Strong"
+
+
+def wind_symbol(
+    speed_kmh: float | None,
+) -> str:
+    if speed_kmh is None:
+        return "?"
+
+    if speed_kmh < 10:
+        return "🌬"
+
+    return "💨"
+
+
+def wind_color(
+    speed_kmh: float | None,
+) -> tuple[int, int, int]:
+    if speed_kmh is None:
+        return (150, 150, 150)
+
+    if speed_kmh < 10:
+        return (100, 210, 255)
+
+    if speed_kmh < 25:
+        return (255, 220, 70)
+
+    return (255, 120, 60)
+
+
+def _wind_ansi_color(
+    speed_kmh: float | None,
+) -> str:
+    red, green, blue = wind_color(
+        speed_kmh
+    )
+
+    return (
+        f"\033[38;2;"
+        f"{red};{green};{blue}m"
+    )
+
+
+def _wind_period(
+    hour: int,
+) -> str | None:
+    if 6 <= hour <= 9:
+        return "Morning"
+
+    if 10 <= hour <= 12:
+        return "Midday"
+
+    if 13 <= hour <= 17:
+        return "Afternoon"
+
+    if 18 <= hour <= 23:
+        return "Evening"
+
+    return None
+
+
+def render_wind_summary(
+    points: Sequence[WeatherPoint],
+) -> str:
+    """
+    Render a simple wind summary for four periods of the day.
+
+    Morning:   06:00-09:59
+    Midday:    10:00-12:59
+    Afternoon: 13:00-17:59
+    Evening:   18:00-23:59
+    """
+    periods = (
+        "Morning",
+        "Midday",
+        "Afternoon",
+        "Evening",
+    )
+
+    grouped: dict[
+        str,
+        list[float],
+    ] = {
+        period: []
+        for period in periods
+    }
+
+    for point in points:
+        period = _wind_period(
+            point.time.hour
+        )
+
+        if (
+            period is not None
+            and point.wind_speed is not None
+        ):
+            grouped[period].append(
+                point.wind_speed
+            )
+
+    rendered: list[str] = []
+
+    for period in periods:
+        speeds = grouped[period]
+
+        if not speeds:
+            rendered.append(
+                f"  {period:<10} "
+                f"⚪  No data"
+            )
+            continue
+
+        # A napszakot a várható legerősebb
+        # széllökés alapján kategorizáljuk.
+        # Így egy rövid, de erős szeles időszak
+        # sem tűnik el az átlagolásban.
+        peak_speed = max(speeds)
+
+        level = wind_level(
+            peak_speed
+        )
+
+        symbol = wind_symbol(
+            peak_speed
+        )
+
+        color = _wind_ansi_color(
+            peak_speed
+        )
+
+        rendered.append(
+            f"  {period:<10}"
+            f"{color}{symbol}{_RESET}"
+            f"  {color}{level:<9}{_RESET}"
+            f"{peak_speed:>5.0f} km/h"
+        )
+
+    return "\n".join(rendered)
+
+
 def render_temperature_chart(
     points: Sequence[WeatherPoint],
     *,
     width: int = 32,
     height: int = 10,
 ) -> str:
-    """Render a colored temperature chart using Braille characters."""
     if not points:
         return "No temperature data."
 
