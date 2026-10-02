@@ -129,8 +129,6 @@ def _temperature_axis(
     if data_range == 0:
         data_range = 2.0
 
-    # Add 20% of the actual daily temperature range
-    # below the minimum and above the maximum.
     padding = data_range * 0.20
 
     padded_minimum = minimum - padding
@@ -174,7 +172,7 @@ def _plot_line(
     minimum: float,
     maximum: float,
 ) -> set[tuple[int, int]]:
-    """Create a pixel representation of a temperature line."""
+    """Create a pixel representation of a line."""
     pixels: set[tuple[int, int]] = set()
 
     if not values:
@@ -425,9 +423,7 @@ def _render_time_axis(
     ] = []
 
     for index, point in enumerate(points):
-        hour = point.time.hour
-
-        if hour % 4 == 0:
+        if point.time.hour % 4 == 0:
             labels.append(
                 (
                     index,
@@ -513,6 +509,334 @@ def _axis_labels_by_row(
     return labels
 
 
+def weather_symbol(
+    weather_code: int | None,
+) -> str:
+    """Convert a WMO weather code into a terminal-friendly symbol."""
+    if weather_code is None:
+        return "?"
+
+    if weather_code == 0:
+        return "☀"
+
+    if weather_code in (1, 2):
+        return "🌤"
+
+    if weather_code == 3:
+        return "☁"
+
+    if weather_code in (45, 48):
+        return "🌫"
+
+    if weather_code in (51, 53, 55, 56, 57):
+        return "🌦"
+
+    if weather_code in (61, 63, 65, 66, 67):
+        return "🌧"
+
+    if weather_code in (71, 73, 75, 77):
+        return "🌨"
+
+    if weather_code in (80, 81, 82):
+        return "🌦"
+
+    if weather_code in (95, 96, 99):
+        return "⛈"
+
+    return "?"
+
+
+def weather_color(
+    weather_code: int | None,
+) -> tuple[int, int, int]:
+    """Return an RGB color for a WMO weather code."""
+    if weather_code == 0:
+        return (255, 210, 40)
+
+    if weather_code in (1, 2):
+        return (255, 220, 80)
+
+    if weather_code == 3:
+        return (170, 180, 195)
+
+    if weather_code in (45, 48):
+        return (150, 160, 170)
+
+    if weather_code in (51, 53, 55, 56, 57):
+        return (90, 190, 255)
+
+    if weather_code in (61, 63, 65, 66, 67):
+        return (60, 150, 255)
+
+    if weather_code in (71, 73, 75, 77):
+        return (150, 225, 255)
+
+    if weather_code in (80, 81, 82):
+        return (70, 175, 255)
+
+    if weather_code in (95, 96, 99):
+        return (190, 120, 255)
+
+    return (180, 180, 180)
+
+
+def _weather_ansi_color(
+    weather_code: int | None,
+) -> str:
+    """Return an ANSI truecolor sequence for a weather code."""
+    red, green, blue = weather_color(
+        weather_code
+    )
+
+    return (
+        f"\033[38;2;"
+        f"{red};{green};{blue}m"
+    )
+
+
+def _render_weather_axis(
+    points: Sequence[WeatherPoint],
+    *,
+    char_width: int,
+) -> str:
+    """Render colored weather symbols aligned with the time axis."""
+    if not points or char_width <= 0:
+        return ""
+
+    axis = [" "] * char_width
+
+    for index, point in enumerate(points):
+        if point.time.hour % 4 != 0:
+            continue
+
+        position = round(
+            index
+            * (char_width - 1)
+            / max(
+                1,
+                len(points) - 1,
+            )
+        )
+
+        symbol = weather_symbol(
+            point.weather_code
+        )
+
+        color = _weather_ansi_color(
+            point.weather_code
+        )
+
+        colored_symbol = (
+            f"{color}"
+            f"{symbol}"
+            f"{_RESET}"
+        )
+
+        if position < char_width:
+            axis[position] = colored_symbol
+
+    return "".join(axis)
+
+
+def render_weather_strip(
+    points: Sequence[WeatherPoint],
+    *,
+    width: int = 32,
+) -> str:
+    """Render colored weather symbols with a compact time axis."""
+    if not points:
+        return "No weather data."
+
+    weather_width = max(
+        2,
+        width,
+    )
+
+    weather_axis = _render_weather_axis(
+        points,
+        char_width=weather_width,
+    )
+
+    time_axis = _render_time_axis(
+        points,
+        char_width=weather_width,
+    )
+
+    return "\n".join(
+        (
+            weather_axis,
+            time_axis,
+        )
+    )
+
+
+def render_precipitation_chart(
+    points: Sequence[WeatherPoint],
+    *,
+    width: int = 32,
+    height: int = 6,
+) -> str:
+    """Render precipitation probability as a compact bar chart."""
+    if not points:
+        return "No precipitation data."
+
+    visible_points = [
+        point
+        for point in points
+        if point.time.hour % 4 == 0
+    ]
+
+    if not visible_points:
+        visible_points = list(points)
+
+    chart_width = max(
+        2,
+        width,
+    )
+
+    chart_height = max(
+        1,
+        height,
+    )
+
+    probabilities = [
+        point.precipitation_probability
+        if point.precipitation_probability
+        is not None
+        else 0
+        for point in visible_points
+    ]
+
+    # Ha egész nap 0% a csapadékvalószínűség,
+    # ne üres diagramot jelenítsünk meg.
+    no_rain = all(
+        probability == 0
+        for probability in probabilities
+    )
+
+    slot_width = max(
+        1,
+        chart_width
+        // len(visible_points),
+    )
+
+    bar_width = max(
+        1,
+        min(
+            3,
+            slot_width - 1,
+        ),
+    )
+
+    # Öt oszlopsor: 100, 80, 60, 40, 20%.
+    bar_levels = (
+        100,
+        80,
+        60,
+        40,
+        20,
+    )
+
+    lines: list[str] = []
+
+    for level in bar_levels:
+        line = ""
+
+        for point in visible_points:
+            probability = (
+                point.precipitation_probability
+                if point.precipitation_probability
+                is not None
+                else 0
+            )
+
+            filled = (
+                probability >= level
+            )
+
+            bar = (
+                "█" * bar_width
+                if filled
+                else " " * bar_width
+            )
+
+            padding = (
+                " "
+                * (
+                    slot_width
+                    - bar_width
+                )
+            )
+
+            line += bar + padding
+
+        if no_rain and level == 40:
+            message = "no rain today"
+
+            message_start = max(
+                0,
+                (
+                    chart_width
+                    - len(message)
+                )
+                // 2,
+            )
+
+            line_chars = list(
+                line[:chart_width]
+            )
+
+            for index, character in enumerate(
+                message
+            ):
+                target = (
+                    message_start
+                    + index
+                )
+
+                if target < chart_width:
+                    line_chars[target] = character
+
+            line = "".join(line_chars)
+
+        lines.append(
+            line[:chart_width]
+        )
+
+    # A 0%-os baseline.
+    lines.append(
+        "─" * chart_width
+    )
+
+    time_axis = _render_time_axis(
+        visible_points,
+        char_width=chart_width,
+    )
+
+    lines.append(time_axis)
+
+    rendered: list[str] = []
+
+    for level, line in zip(
+        bar_levels,
+        lines[:len(bar_levels)],
+    ):
+        rendered.append(
+            f"{level:>3}% │ {line}"
+        )
+
+    rendered.append(
+        f"{'0':>3}% └"
+        + "─" * chart_width
+    )
+
+    rendered.append(
+        "      " + time_axis
+    )
+
+    return "\n".join(rendered)
+
+
 def render_temperature_chart(
     points: Sequence[WeatherPoint],
     *,
@@ -543,7 +867,6 @@ def render_temperature_chart(
         )
     )
 
-    # Egy Braille karakter 2 x 4 pixelt jelent.
     pixel_width = max(
         2,
         width * 2,
@@ -602,8 +925,6 @@ def render_temperature_chart(
                 f"{'':>5} │ {line}"
             )
 
-    # ANSI escape sequence-ek miatt a
-    # len(graph[0]) nem használható.
     graph_width = (
         pixel_width + 1
     ) // 2
