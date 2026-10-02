@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-weather = "weather_terminal.cli:main"
+termweather = "weather_terminal.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -17,3 +17,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+]
