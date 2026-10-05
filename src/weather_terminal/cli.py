@@ -1,4 +1,5 @@
 import argparse
+from datetime import timedelta
 
 from .api import fetch_forecast
 from .renderer import (
@@ -7,6 +8,19 @@ from .renderer import (
     render_weather_strip,
     render_wind_summary,
 )
+
+
+def select_forecast_points(points, *, tomorrow: bool):
+    """Select the 24 hourly points for today or the next calendar day."""
+    target_date = points[0].time.date()
+    if tomorrow:
+        target_date += timedelta(days=1)
+
+    return tuple(
+        point
+        for point in points
+        if point.time.date() == target_date
+    )[:24]
 
 
 def main() -> None:
@@ -19,6 +33,13 @@ def main() -> None:
         "--compact",
         action="store_true",
         help="Show a space-saving forecast layout",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--tomorrow",
+        action="store_true",
+        help="Show tomorrow's forecast",
     )
 
     parser.add_argument(
@@ -46,7 +67,10 @@ def main() -> None:
         location=args.location,
     )
 
-    points = forecast.points[:24]
+    points = select_forecast_points(
+        forecast.points,
+        tomorrow=args.tomorrow,
+    )
 
     if not args.compact:
         print()

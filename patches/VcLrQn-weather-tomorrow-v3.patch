@@ -1,0 +1,130 @@
+--- a/src/weather_terminal/cli.py
++++ b/src/weather_terminal/cli.py
+@@ -1,4 +1,5 @@
+ import argparse
++from datetime import timedelta
+ 
+ from .api import fetch_forecast
+ from .renderer import (
+@@ -7,6 +8,19 @@
+     render_weather_strip,
+     render_wind_summary,
+ )
++
++
++def select_forecast_points(points, *, tomorrow: bool):
++    """Select the 24 hourly points for today or the next calendar day."""
++    target_date = points[0].time.date()
++    if tomorrow:
++        target_date += timedelta(days=1)
++
++    return tuple(
++        point
++        for point in points
++        if point.time.date() == target_date
++    )[:24]
+ 
+ 
+ def main() -> None:
+@@ -19,6 +33,13 @@
+         "--compact",
+         action="store_true",
+         help="Show a space-saving forecast layout",
++    )
++
++    parser.add_argument(
++        "-t",
++        "--tomorrow",
++        action="store_true",
++        help="Show tomorrow's forecast",
+     )
+ 
+     parser.add_argument(
+@@ -46,7 +67,10 @@
+         location=args.location,
+     )
+ 
+-    points = forecast.points[:24]
++    points = select_forecast_points(
++        forecast.points,
++        tomorrow=args.tomorrow,
++    )
+ 
+     if not args.compact:
+         print()
+--- a/tests/test_cli.py
++++ b/tests/test_cli.py
+@@ -1,5 +1,5 @@
+ import sys
+-from datetime import datetime
++from datetime import datetime, timedelta
+ 
+ from weather_terminal import cli
+ from weather_terminal.models import WeatherForecast, WeatherPoint
+@@ -8,14 +8,14 @@
+ def make_forecast() -> WeatherForecast:
+     points = tuple(
+         WeatherPoint(
+-            time=datetime(2026, 10, 2, hour),
++            time=datetime(2026, 10, 2) + timedelta(hours=hour),
+             temperature=20.0,
+             precipitation_probability=0,
+             weather_code=0,
+             wind_speed=5.0,
+             humidity=45,
+         )
+-        for hour in range(24)
++        for hour in range(48)
+     )
+ 
+     return WeatherForecast(
+@@ -105,3 +105,49 @@
+     assert "WIND_SUMMARY" in output
+     assert "  HUMIDITY\n" in output
+     assert "  Humidity: 45%" in output
++
++
++def test_select_forecast_points_returns_tomorrow():
++    forecast = make_forecast()
++
++    points = cli.select_forecast_points(
++        forecast.points,
++        tomorrow=True,
++    )
++
++    assert len(points) == 24
++    assert points[0].time == datetime(2026, 10, 3, 0)
++    assert points[-1].time == datetime(2026, 10, 3, 23)
++
++
++def test_tomorrow_option_uses_tomorrows_forecast(monkeypatch, capsys):
++    patch_renderers(monkeypatch)
++    monkeypatch.setattr(
++        sys,
++        "argv",
++        ["termweather", "--tomorrow"],
++    )
++
++    cli.main()
++
++    output = capsys.readouterr().out
++
++    assert "Forecast: 2026-10-03" in output
++    assert "Forecast: 2026-10-02" not in output
++
++
++def test_tomorrow_option_works_with_compact(monkeypatch, capsys):
++    patch_renderers(monkeypatch)
++    monkeypatch.setattr(
++        sys,
++        "argv",
++        ["termweather", "--tomorrow", "--compact"],
++    )
++
++    cli.main()
++
++    output = capsys.readouterr().out
++
++    assert "Forecast:" not in output
++    assert "TEMPERATURE_CHART" in output
++    assert "WIND_SUMMARY" in output
