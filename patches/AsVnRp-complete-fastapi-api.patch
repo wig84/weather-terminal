@@ -1,0 +1,36 @@
+--- a/src/weather_terminal/web.py
++++ b/src/weather_terminal/web.py
+@@ -61,3 +61,17 @@
+         "latitude": forecast.latitude,
+         "longitude": forecast.longitude,
+         "timezone": forecast.timezone,
++        "day": day,
++        "date": target_date.isoformat(),
++        "points": [
++            {
++                "time": point.time.isoformat(),
++                "temperature": point.temperature,
++                "precipitation_probability": point.precipitation_probability,
++                "weather_code": point.weather_code,
++                "wind_speed": point.wind_speed,
++                "humidity": point.humidity,
++            }
++            for point in points
++        ],
++    }
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -2,11 +2,12 @@
+ name = "weather-terminal"
+ version = "0.1.0"
+ description = "A small graphical weather forecast for the terminal"
+-readme = "README.md"
++readme = "README-weather-terminal.md"
+ requires-python = ">=3.12"
+ dependencies = [
+     "fastapi>=0.115,<1.0",
+     "httpx>=0.27,<1.0",
++    "uvicorn>=0.30,<1.0",
+ ]
+ 
+ [project.scripts]

@@ -1,0 +1,18 @@
+diff --git a/tests/test_web.py b/tests/test_web.py
+--- a/tests/test_web.py
++++ b/tests/test_web.py
+@@ -76,13 +76,14 @@ def test_forecast_rejects_unknown_day():
+ def test_forecast_handles_empty_provider_result(monkeypatch):
+     forecast = make_forecast()
+     empty_forecast = WeatherForecast(
+         location=forecast.location,
+         latitude=forecast.latitude,
+         longitude=forecast.longitude,
+         timezone=forecast.timezone,
+         points=(),
++    )
+     monkeypatch.setattr(
+         web,
+         "fetch_forecast",
+         lambda **kwargs: empty_forecast,
+     )

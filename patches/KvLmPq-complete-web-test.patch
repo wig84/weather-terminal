@@ -1,0 +1,21 @@
+diff --git a/tests/test_web.py b/tests/test_web.py
+--- a/tests/test_web.py
++++ b/tests/test_web.py
+@@ -82,3 +82,17 @@
+         location=forecast.location,
+         latitude=forecast.latitude,
+         longitude=forecast.longitude,
++        timezone=forecast.timezone,
++        points=(),
++    )
++    monkeypatch.setattr(
++        web,
++        "fetch_forecast",
++        lambda **kwargs: empty_forecast,
++    )
++    client = TestClient(web.app)
++
++    response = client.get("/api/forecast")
++
++    assert response.status_code == 502
++    assert "no forecast points" in response.json()["detail"]
